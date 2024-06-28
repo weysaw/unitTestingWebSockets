@@ -1,34 +1,32 @@
-import WebSocket from 'ws'
+import { Server, Socket } from 'socket.io'
 
 export class ServerChat {
-  private readonly server: WebSocket.Server
+  private readonly io: Server
   private readonly port: number
 
   constructor (port: number) {
     this.port = port
-    this.server = new WebSocket.Server({ port })
+    this.io = new Server(port, {
+      cors: {
+        origin: '*'
+      }
+    })
   }
 
   startServer (): void {
-    this.server.on('connection', (ws): void => {
-      this.onMessage(ws, 'Hi')
+    this.io.on('connection', (socketClient: Socket): void => {
+      socketClient.on('message', (message: string): void => {
+        this.sendResponseClient(socketClient, `Hello I am the server, you sent: ${message}`)
+      })
     })
     console.log(`Server running on port ${this.port}`)
   }
 
-  onMessage (ws: WebSocket, message: string): void {
-    ws.on('message', (message: string): void => {
-      this.sendMessageClient(ws, message)
-    })
-    console.log('Client connected')
-    console.log(message)
+  private sendResponseClient (socketClient: Socket, message: string): void {
+    socketClient.emit('response', message)
   }
 
-  private sendMessageClient (ws: WebSocket, message: string): void {
-    ws.send(`Hello I am the server, I sent you: ${message}`)
-  }
-
-  onClientDisconnect = (ws: WebSocket): void => {
-    console.log('Client disconnected')
+  close (): void {
+    this.io.close()
   }
 }
